@@ -106,6 +106,16 @@ const Effects = {
             }
         };
     },
+    modifyGlory: function(value) {
+        return {
+            apply: function(card) {
+                // modify glory
+            },
+            unapply: function(card) {
+                // modify glory
+            }
+        };
+    },
     modifyInitiative: function(value) {
         return {
             apply: function(card) {
