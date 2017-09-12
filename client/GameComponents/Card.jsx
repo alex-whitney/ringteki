@@ -150,13 +150,19 @@ class Card extends React.Component {
     }
 
     getAttachments() {
+        let honorClass = '';
+
         if(this.props.source !== 'play area') {
             return null;
         }
 
+        if(this.props.card.isHonored || this.props.card.isDishonored) {
+            honorClass += ' honor';
+        }
+
         var index = 1;
         var attachments = _.map(this.props.card.attachments, attachment => {
-            var returnedAttachment = (<Card key={ attachment.uuid } source={ this.props.source } card={ attachment } className={ 'attachment attachment-' + index } wrapped={ false }
+            var returnedAttachment = (<Card key={ attachment.uuid } source={ this.props.source } card={ attachment } className={ 'attachment attachment-' + index + honorClass } wrapped={ false }
                 onMouseOver={ this.props.disableMouseOver ? null : this.onMouseOver.bind(this, attachment) }
                 onMouseOut={ this.props.disableMouseOver ? null : this.onMouseOut }
                 onClick={ this.props.onClick }
@@ -203,14 +209,24 @@ class Card extends React.Component {
         return true;
     }
 
+    showHonor() {
+        if(this.props.card.isHonored || this.props.card.isDishonored) {
+            return true;
+        }
+
+        return false;
+    }
+
     isFacedown() {
         return this.props.card.facedown || !this.props.card.id;
     }
 
     getCard() {
-        var cardClass = 'card';
-        var imageClass = 'card-image';
-        var cardBack = 'cardback.jpg';
+        let cardClass = 'card';
+        let honorClass = '';
+        let honorImage = '';
+        let imageClass = 'card-image';
+        let cardBack = 'cardback.jpg';
 
         if(!this.props.card) {
             return <div />;
@@ -220,12 +236,15 @@ class Card extends React.Component {
 
         if(this.props.orientation === 'bowed' || this.props.card.bowed || this.props.orientation === 'horizontal') {
             cardClass += ' horizontal';
+            honorClass += ' vertical bowed';
             imageClass += ' vertical bowed';
         } else if(this.props.orientation === 'horizontal') {
             cardClass += ' horizontal';
+            honorClass += ' horizontal';
             imageClass += ' horizontal';
         } else {
             cardClass += ' vertical';
+            honorClass += ' vertical';
             imageClass += ' vertical';
         }
 
@@ -245,14 +264,13 @@ class Card extends React.Component {
             cardClass += ' new';
         }
 
-        if(this.props.isHonored) {
-            cardClass += ' honored';
-        } else if(this.props.isDishonored) {
-            cardClass += ' dishonored';
-        }
-
         if(this.props.className) {
             cardClass += ' ' + this.props.className;
+        }
+
+        if(this.props.card.isHonored || this.props.card.isDishonored) {
+            cardClass += ' honor';
+            imageClass += ' honor';
         }
 
         if(this.props.card.isConflict || this.props.source === 'conflict deck') {
@@ -263,6 +281,14 @@ class Card extends React.Component {
             cardBack = 'provincecardback.jpg';
         } else {
             cardBack = 'cardback.jpg';
+        }
+
+        if(this.props.card.isHonored) {
+            honorClass += ' honored';
+            honorImage = 'honored.png';
+        } else if(this.props.card.isDishonored) {
+            honorClass += ' dishonored';
+            honorImage = 'dishonored.png';
         }
 
         return (
@@ -280,6 +306,7 @@ class Card extends React.Component {
                     <div>
                         <span className='card-name'>{ this.props.card.name }</span>
                         <img className={ imageClass } src={ '/img/cards/' + (!this.isFacedown() ? (this.props.card.id + '.jpg') : cardBack) } />
+                        { this.showHonor() ? <img className={ honorClass } src={ '/img/' + honorImage } /> : null }
                     </div>
                     { this.showCounters() ? <CardCounters counters={ this.getCountersForCard(this.props.card) } /> : null }
                 </div>

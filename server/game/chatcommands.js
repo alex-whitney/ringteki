@@ -27,10 +27,7 @@ class ChatCommands {
             '/disconnectme': this.disconnectMe
         };
         this.tokens = [
-            'honored',
-            'dishonored',
-            'fate',
-            'ready'
+            'fate'
         ];
     }
 

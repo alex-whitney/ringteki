@@ -19,11 +19,29 @@
   &.vertical {
     height: @card-height;
     width: @card-width;
+
+    &.honor {
+      height: @card-height-honor;
+
+      &.attachment {
+        height: @card-height;
+        width: @card-width;
+      }
+    }
   }
 
   &.horizontal {
     height: @card-width;
     width: @card-height;
+
+    &.honor {
+      width: @card-height-honor;
+
+      &.attachment {
+        width: @card-height;      
+      }
+    }
+
   }
 
   &.selectable {
@@ -80,6 +98,88 @@
 
   &.bowed {
     left: 9px;
+    top: -10px;
+    transform: rotate(90deg);
+
+    &.honor {
+      left: 53px;
+    }
+  }
+}
+
+.honor .card-image {
+  left: 0px;
+  position: absolute;
+  top: 0;
+
+  &.vertical {
+    height: @card-height;
+    width: @card-width;
+  }
+
+  &.horizontal {
+    height: @card-width;
+    width: @card-height;
+  }
+
+  &.bowed {
+    left: 53px;
+    top: -10px;
+    transform: rotate(90deg);
+
+    &.honor {
+      left: 53px;
+    }
+  }
+}
+
+.honor.attachment .card-image {
+  left: 0px;
+  position: absolute;
+  top: 0;
+
+  &.vertical {
+    height: @card-height;
+    width: @card-width;
+  }
+
+  &.horizontal {
+    height: @card-width;
+    width: @card-height;
+  }
+
+  &.bowed {
+    left: 9px;
+    top: -10px;
+    transform: rotate(90deg);
+
+    &.honor {
+      left: 53px;
+    }
+  }
+}
+
+.honored {
+  position: absolute;
+  width: @card-width;
+  top: @card-height;
+  left: 0px;
+
+  &.bowed {
+    left: -10px;
+    top: 11px;
+    transform: rotate(90deg);
+  } 
+}
+
+.dishonored {
+  position: absolute;
+  width: @card-width;
+  top: @card-height;
+  left: 0px;
+
+  &.bowed {
+    left: @card-height-honor;
     top: -10px;
     transform: rotate(90deg);
   }
@@ -143,6 +243,11 @@
 .attachment {
   margin-top: -(@card-height);
 
+  &.honor {
+    margin-top: -(@card-height-honor);
+    margin-bottom: 43px;
+  }
+
 }
 
 .generate-attachments(@n, @i: 1) when (@i =< @n) {
@@ -154,24 +259,15 @@
     margin-left: -(@attachment-offset)*@i;
     margin-top: -(@card-height)-(@attachment-offset);
     z-index: @layer-cards - @i;
+
+    &.honor {
+      margin-left: 53px-((@attachment-offset)*@i);
+    }
   }
   .generate-attachments(@n, (@i + 1));
 }
 
 .generate-attachments(5, 1);
-
-.card-dupe {
-  margin-bottom: @attachment-offset;
-  margin-top: -(@attachment-offset + @card-height);
-}
-
-.generate-card-dupes(@n, @i: 1) when (@i =< @n) {
-  .card-dupe-@{i} {
-    z-index: @layer-cards - @i;
-  }
-  .generate-card-dupes(@n, (@i + 1));
-}
-.generate-card-dupes(5, 1);
 
 .card-type-faction.horizontal {
     margin: 10px 0 0 -10px;
