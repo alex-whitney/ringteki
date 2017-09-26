@@ -7,7 +7,9 @@
     "test": "cross-env JASMINE_CONFIG_PATH=./jasmine.json jasmine && karma start karma.config.js --single-run",
     "cover": "cross-env JASMINE_CONFIG_PATH=./jasmine.json nyc jasmine && nyc report",
     "lint": "eslint server/ test/server/ client/ --ext=js --ext=jsx",
-    "build": "cross-env NODE_ENV=production webpack -p --config webpack.config.production.js"
+    "build": "cross-env NODE_ENV=production webpack -p --config webpack.config.production.js",
+    "server": "cross-env ./node_modules/.bin/ts-node .",
+    "gamenode": "cross-env ./node_modules/.bin/ts-node server/gamenode"
   },
   "repository": {
     "type": "git",
@@ -79,6 +81,7 @@
   },
   "devDependencies": {
     "@types/node": "^6.0.0",
+    "@types/underscore": "^1.8.3",
     "autoprefixer": "^7.1.2",
     "babel-core": "^6.25.0",
     "babel-eslint": "^7.2.3",
