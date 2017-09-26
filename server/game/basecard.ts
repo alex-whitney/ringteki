@@ -2,6 +2,7 @@ const uuid = require('uuid');
 import * as _ from 'underscore';
 
 import { Player } from './player';
+import { Location } from './game';
 
 const AbilityDsl = require('./abilitydsl.js');
 const CardAction = require('./cardaction.js');
@@ -76,7 +77,7 @@ export class BaseCard {
     eventsForRegistration;
 
     parent;
-    location;
+    location: Location;
 
     // Referenced in summary, but not populated in this file
     new;
@@ -329,7 +330,7 @@ export class BaseCard {
         this.tokens = {};
     }
 
-    moveTo(targetLocation) {
+    moveTo(targetLocation: Location) {
         let originalLocation = this.location;
 
         this.location = targetLocation;
@@ -356,7 +357,7 @@ export class BaseCard {
             }
         });
 
-        if(targetLocation !== 'play area') {
+        if(targetLocation !== Location.PlayArea) {
             this.facedown = false;
         }
 
