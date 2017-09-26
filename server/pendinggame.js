@@ -16,6 +16,8 @@ class PendingGame {
         this.gameType = details.gameType;
         this.createdAt = new Date();
         this.gameChat = new GameChat();
+        this.node = null;
+        this.started = false;
     }
 
     // Getters

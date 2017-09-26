@@ -41,7 +41,6 @@ export class DrawCard extends BaseCard {
     fate = 0;
     glory: number;
     contributesToFavor = true;
-    bowed = false;
     inConflict = false;
     isHonored = false;
     isDishonored = false;

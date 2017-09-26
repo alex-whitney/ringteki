@@ -209,7 +209,7 @@ class Lobby {
     broadcastUserList() {
         var now = moment();
 
-        if((now - this.lastUserBroadcast) / 1000 < 60) {
+        if((now.diff(this.lastUserBroadcast)) / 1000 < 60) {
             return;
         }
 
@@ -591,7 +591,7 @@ class Lobby {
     }
 
     onWorkerStarted(nodeName) {
-        this.router.sendCommand(nodeName, 'CARDDATA', { titleCardData: this.titleCardData, shortCardData: this.shortCardData });
+        this.router.sendCommand(nodeName, 'CARDDATA', { shortCardData: this.shortCardData });
     }
 
     onNodeReconnected(nodeName, games) {

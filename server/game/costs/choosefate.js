@@ -30,7 +30,7 @@ class ChooseFate extends ChooseCost {
         this.result = result;
         
         let buttons = _.map(payableCosts, (cost, text) => {
-            return { text: text, arg: text, method: 'chooseCost' };
+            return { text: text.toString(), arg: text.toString(), method: 'chooseCost' };
         });
         buttons.push({ text: 'Cancel', arg: 'Cancel', method: 'chooseCost' });
 

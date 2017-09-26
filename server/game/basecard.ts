@@ -34,6 +34,7 @@ export interface BaseCardSummary {
     type?;
     uuid?: string;
     inConflict?: boolean;
+    bowed?: boolean;
 }
 
 export class BaseCard {
@@ -66,6 +67,7 @@ export class BaseCard {
     isConflict = false;
     isDynasty = false;
     isStronghold = false;
+    bowed = false;
 
     keywords: object;
     printedKeywords: Array<any>;
@@ -555,7 +557,8 @@ export class BaseCard {
             name: this.cardData.name,
             tokens: this.tokens,
             type: this.getType(),
-            uuid: this.uuid
+            uuid: this.uuid,
+            bowed: this.bowed
         };
 
         return _.extend(state, selectionState);

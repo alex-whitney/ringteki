@@ -12,10 +12,8 @@ let gameService = new GameService(db);
 let args = process.argv.slice(2);
 
 if(_.size(args) < 2) {
-    console.error('Must provide start and end date');
-
     db.close();
-    return;
+    throw new Error('Must provide start and end date');
 }
 
 console.info('Running stats between', args[0], 'and', args[1]);

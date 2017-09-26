@@ -34,7 +34,7 @@ class EventRegistrar {
                 this.registerEvent(event);
             } else {
                 _.each(event, (methodName, eventName) => {
-                    this.registerEvent(eventName, methodName);
+                    this.registerEvent(eventName.toString(), methodName);
                 });
             }
         });
@@ -47,7 +47,7 @@ class EventRegistrar {
      * @param {string} methodName An optional  name of the method to bind as a
      * handler. If not provided, the event name will be used as the method name.
      */
-    registerEvent(eventName, methodName) {
+    registerEvent(eventName, methodName = undefined) {
         let method = this.context[methodName || eventName];
 
         if(!method) {
