@@ -9,7 +9,7 @@ const config = require('config');
 
 const logger = require('../log.js');
 const ZmqSocket = require('./zmqsocket.js');
-const Game = require('../game/game.js');
+const Game = require('../game/game').Game;
 const Socket = require('../socket.js');
 const version = require('../../version.js');
 

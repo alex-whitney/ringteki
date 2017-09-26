@@ -1,12 +1,13 @@
-const _ = require('underscore');
-const EventEmitter = require('events');
+import * as _ from 'underscore';
+import * as events from 'events';
+import { Player } from './player';
+import { Spectator } from "./spectator";
+import {DrawCard} from "./drawcard";
 
 const ChatCommands = require('./chatcommands.js');
 const GameChat = require('./gamechat.js');
 const EffectEngine = require('./effectengine.js');
 const Effect = require('./effect.js');
-const Player = require('./player').Player;
-const Spectator = require('./spectator').Spectator;
 const AnonymousSpectator = require('./anonymousspectator.js');
 const GamePipeline = require('./gamepipeline.js');
 const SetupPhase = require('./gamesteps/setupphase.js');
@@ -28,13 +29,57 @@ const TriggeredAbilityWindow = require('./gamesteps/triggeredabilitywindow.js');
 const KillCharacters = require('./gamesteps/killcharacters.js');
 const Ring = require('./ring.js');
 
-class Game extends EventEmitter {
-    constructor(details, options = {}) {
+export const enum Location {
+    Hand = 'hand',
+    ConflictDeck = 'conflict deck',
+    DynastyDeck = 'dynasty deck',
+    ConflictDiscardPile = 'conflict discard pile',
+    DynastyDiscardPile = 'dynasty discard pile',
+    PlayArea = 'play area',
+    ProvinceOne = 'province 1',
+    ProvinceTwo = 'province 2',
+    ProvinceThree = 'province 3',
+    ProvinceFour = 'province 4',
+    StrongholdProvince = 'stronghold province',
+    ProvinceDeck = 'province deck',
+    OutOfGame = 'out of game'
+}
+
+export class Game extends events.EventEmitter {
+    effectEngine;
+    playersAndSpectators: { [playerName: string]: Spectator } = {};
+    playerCards: any = {};
+    allCards: _.Underscore<any>;
+    gameChat;
+    chatCommands;
+    pipeline;
+    id: string;
+    name: string;
+    allowSpectators: boolean;
+    owner: Player;
+    started = false;
+    playStarted = false;
+    createdAt: Date;
+    savedGameId: string;
+    gameType;
+    currentActionWindow: any = null;
+    currentConflict: any = null;
+    abilityCardStack: Array<any> = [];
+    abilityWindowStack: Array<any> = [];
+    password: string;
+    rings;
+    shortCardData: Array<any>;
+    router;
+
+    winner: Player;
+    startedAt: Date;
+    finishedAt: Date;
+    winReason;
+
+    constructor(details, options:any = {}) {
         super();
 
         this.effectEngine = new EffectEngine(this);
-        this.playersAndSpectators = {};
-        this.playerCards = {};
         this.gameChat = new GameChat();
         this.chatCommands = new ChatCommands(this);
         this.pipeline = new GamePipeline();
@@ -42,15 +87,9 @@ class Game extends EventEmitter {
         this.name = details.name;
         this.allowSpectators = details.allowSpectators;
         this.owner = details.owner;
-        this.started = false;
-        this.playStarted = false;
         this.createdAt = new Date();
         this.savedGameId = details.savedGameId;
         this.gameType = details.gameType;
-        this.currentActionWindow = null;
-        this.currentConflict = null;
-        this.abilityCardStack = [];
-        this.abilityWindowStack = [];
         this.password = details.password;
 
         this.rings = {
@@ -62,11 +101,11 @@ class Game extends EventEmitter {
         };
         this.shortCardData = options.shortCardData || [];
 
-        _.each(details.players, player => {
+        _.each<any>(details.players, player => {
             this.playersAndSpectators[player.user.username] = new Player(player.id, player.user, this.owner === player.user.username, this);
         });
 
-        _.each(details.spectators, spectator => {
+        _.each<any>(details.spectators, spectator => {
             this.playersAndSpectators[spectator.user.username] = new Spectator(spectator.id, spectator.user);
         });
 
@@ -81,8 +120,8 @@ class Game extends EventEmitter {
         this.router.handleError(this, e);
     }
 
-    addMessage() {
-        this.gameChat.addMessage(...arguments);
+    addMessage(...args) {
+        this.gameChat.addMessage(...args);
     }
 
     get messages() {
@@ -97,33 +136,33 @@ class Game extends EventEmitter {
         return this.playersAndSpectators[playerName] && !this.playersAndSpectators[playerName].left;
     }
 
-    getPlayers() {
+    getPlayers(): { [playerName: string]: Player } {
         return _.omit(this.playersAndSpectators, player => this.isSpectator(player));
     }
 
-    getPlayerByName(playerName) {
+    getPlayerByName(playerName): Player {
         return this.getPlayers()[playerName];
     }
 
-    getPlayersInFirstPlayerOrder() {
-        return _.sortBy(this.getPlayers(), player => !player.firstPlayer);
+    getPlayersInFirstPlayerOrder(): Player[] {
+        return _.sortBy(_.values(this.getPlayers()), player => !player.firstPlayer);
     }
 
-    getPlayersAndSpectators() {
+    getPlayersAndSpectators(): { [name: string]: Spectator } {
         return this.playersAndSpectators;
     }
 
-    getSpectators() {
+    getSpectators(): { [name: string]: Spectator } {
         return _.pick(this.playersAndSpectators, player => this.isSpectator(player));
     }
 
-    getFirstPlayer() {
+    getFirstPlayer(): Player {
         return _.find(this.getPlayers(), p => {
             return p.firstPlayer;
         });
     }
 
-    getOtherPlayer(player) {
+    getOtherPlayer(player: Player): Player {
         var otherPlayer = _.find(this.getPlayers(), p => {
             return p.name !== player.name;
         });
@@ -131,7 +170,7 @@ class Game extends EventEmitter {
         return otherPlayer;
     }
 
-    findAnyCardInPlayByUuid(cardId) {
+    findAnyCardInPlayByUuid(cardId: string) {
         return _.reduce(this.getPlayers(), (card, player) => {
             if(card) {
                 return card;
@@ -140,7 +179,7 @@ class Game extends EventEmitter {
         }, null);
     }
 
-    findAnyCardInAnyList(cardId) {
+    findAnyCardInAnyList(cardId: string) {
         return _.reduce(this.getPlayers(), (card, player) => {
             if(card) {
                 return card;
@@ -149,7 +188,7 @@ class Game extends EventEmitter {
         }, null);
     }
 
-    findAnyCardsInPlay(predicate) {
+    findAnyCardsInPlay(predicate: { (card: DrawCard): boolean }) {
         var foundCards = [];
 
         _.each(this.getPlayers(), player => {
@@ -163,7 +202,7 @@ class Game extends EventEmitter {
         this.effectEngine.add(new Effect(this, source, properties));
     }
 
-    strongholdCardClicked(sourcePlayer) {
+    strongholdCardClicked(sourcePlayer: string) {
         var player = this.getPlayerByName(sourcePlayer);
 
         if(!player) {
@@ -179,7 +218,7 @@ class Game extends EventEmitter {
         this.addMessage('{0} {1} their stronghold', player, player.stronghold.bowed ? 'bows' : 'readies');
     }
 
-    cardClicked(sourcePlayer, cardId) {
+    cardClicked(sourcePlayer: Player, cardId: string) {
         var player = this.getPlayerByName(sourcePlayer);
 
         if(!player) {
@@ -197,7 +236,14 @@ class Game extends EventEmitter {
         }
 
         // Attempt to play cards that are not already in the play area.
-        if(['hand', 'province 1', 'province 2', 'province 3', 'province 4'].includes(card.location) && card.getType() !== 'province' && player.playCard(card)) {
+        const playableLocations = [
+            Location.Hand,
+            Location.ProvinceOne,
+            Location.ProvinceTwo,
+            Location.ProvinceThree,
+            Location.ProvinceFour
+        ];
+        if(playableLocations.includes(card.location) && card.getType() !== 'province' && player.playCard(card)) {
             return;
         }
 
@@ -205,7 +251,7 @@ class Game extends EventEmitter {
             return;
         }
 
-        if(!card.facedown && card.location === 'play area' && card.controller === player) {
+        if(!card.facedown && card.location === Location.PlayArea && card.controller === player) {
             if(card.bowed) {
                 player.readyCard(card);
             } else {
@@ -234,8 +280,15 @@ class Game extends EventEmitter {
 
             this.addMessage('{0} {1} {2}', player, card.bowed ? 'bows' : 'readies', card);
         }
-        
-        if(['province 1', 'province 2', 'province 3', 'province 4', 'stronghold province'].includes(card.location) && card.controller === player && card.isDynasty) {
+
+        const provinceLocations = [
+            Location.ProvinceOne,
+            Location.ProvinceTwo,
+            Location.ProvinceThree,
+            Location.ProvinceFour,
+            Location.StrongholdProvince
+        ];
+        if(provinceLocations.includes(card.location) && card.controller === player && card.isDynasty) {
             if(card.facedown) {
                 card.facedown = false;
                 this.addMessage('{0} reveals {1}', player, card);
@@ -243,7 +296,7 @@ class Game extends EventEmitter {
         }        
     }
    
-    ringClicked(sourcePlayer, ringindex) {
+    ringClicked(sourcePlayer: string, ringindex) {
         var ring = this.rings[ringindex];
         var player = this.getPlayerByName(sourcePlayer);
 
@@ -268,7 +321,7 @@ class Game extends EventEmitter {
     }
 
     returnRings() {
-        _.each(this.rings, ring => ring.resetRing());
+        _.each<any>(this.rings, ring => ring.resetRing());
     }
 
     cardHasMenuItem(card, menuItem) {
@@ -305,9 +358,11 @@ class Game extends EventEmitter {
 
         switch(card.location) {
             case 'province':
-                this.callCardMenuCommand(player.activePlot, player, menuItem);
+                // TODO: Is this intended to do anything?
+                // province is not a location, and player.activePlot does not exist
+                //this.callCardMenuCommand(player.activePlot, player, menuItem);
                 break;
-            case 'play area':
+            case Location.PlayArea:
                 if(card.controller !== player && !menuItem.anyPlayer) {
                     return;
                 }
@@ -317,7 +372,7 @@ class Game extends EventEmitter {
         }
     }
 
-    showConflictDeck(playerName) {
+    showConflictDeck(playerName: string) {
         var player = this.getPlayerByName(playerName);
 
         if(!player) {
@@ -335,7 +390,7 @@ class Game extends EventEmitter {
         }
     }
 
-    showDynastyDeck(playerName) {
+    showDynastyDeck(playerName: string) {
         var player = this.getPlayerByName(playerName);
 
         if(!player) {
@@ -353,7 +408,7 @@ class Game extends EventEmitter {
         }
     }
 
-    drop(playerName, cardId, source, target) {
+    drop(playerName: string, cardId, source: Location, target: Location) {
         var player = this.getPlayerByName(playerName);
 
         if(!player) {
@@ -362,11 +417,31 @@ class Game extends EventEmitter {
 
         if(player.drop(cardId, source, target)) {
             var movedCard = 'a card';
-            if(!_.isEmpty(_.intersection(['conflict discard pile', 'dynasty discard pile', 'out of game', 'play area', 'stronghold province', 'province 1', 'province 2', 'province 3', 'province 4'],
-                [source, target]))) {
+
+            const locations = [
+                Location.ConflictDiscardPile,
+                Location.DynastyDiscardPile,
+                Location.OutOfGame,
+                Location.ProvinceOne,
+                Location.ProvinceTwo,
+                Location.ProvinceThree,
+                Location.ProvinceFour,
+                Location.StrongholdProvince,
+                Location.PlayArea
+            ];
+            const deckLocations = [Location.DynastyDeck, Location.ConflictDeck];
+            const provinceLocations = [
+                Location.ProvinceOne,
+                Location.ProvinceTwo,
+                Location.ProvinceThree,
+                Location.ProvinceFour,
+                Location.StrongholdProvince,
+            ];
+
+            if(!_.isEmpty(_.intersection(locations, [source, target]))) {
                 // log the moved card only if it moved from/to a public place
                 var card = this.findAnyCardInAnyList(cardId);
-                if(card && !(['dynasty deck', 'province deck'].includes(source) && ['province 1', 'province 2', 'province 3', 'province 4', 'stronghold province'].includes(target))) {
+                if(card && !(deckLocations.includes(source) && provinceLocations.includes(target))) {
                     movedCard = card.name;
                 }
             }
@@ -376,7 +451,7 @@ class Game extends EventEmitter {
         }
     }
 
-    addHonor(player, honor) {
+    addHonor(player: Player, honor: number) {
         player.honor += honor;
 
         if(player.honor < 0) {
@@ -386,7 +461,7 @@ class Game extends EventEmitter {
         this.checkWinCondition(player);
     }
 
-    addFate(player, fate) {
+    addFate(player: Player, fate: number) {
         player.fate += fate;
 
         if(player.fate < 0) {
@@ -394,7 +469,7 @@ class Game extends EventEmitter {
         }
     }
 
-    transferHonor(source, target, honor) {
+    transferHonor(source: Player, target: Player, honor: number) {
         var appliedHonor = Math.min(source.honor, honor);
         source.honor -= appliedHonor;
         target.honor += appliedHonor;
@@ -403,16 +478,16 @@ class Game extends EventEmitter {
         this.checkWinCondition(source);
     }
 
-    transferFate(to, from, fate) {
+    transferFate(to: Player, from: Player, fate: number) {
         var appliedFate = Math.min(from.fate, fate);
 
         from.fate -= appliedFate;
         to.fate += appliedFate;
 
-        this.raiseEvent('onFateTransferred', { source: from, target: to, amount: fate });
+        this.raiseEvent('onFateTransferred', { source: from, target: to, amount: fate }, () => {});
     }
 
-    checkWinCondition(player) {
+    checkWinCondition(player: Player) {
         if(player.getTotalHonor() >= 25) {
             this.recordWinner(player, 'honor');
         } else if(player.getTotalHonor() === 0) {
@@ -422,7 +497,7 @@ class Game extends EventEmitter {
 
     }
 
-    recordWinner(winner, reason) {
+    recordWinner(winner: Player, reason: string) {
         if(this.winner) {
             return;
         }
@@ -436,7 +511,7 @@ class Game extends EventEmitter {
         this.router.gameWon(this, reason, winner);
     }
     
-    setFirstPlayer(firstPlayer) {
+    setFirstPlayer(firstPlayer: Player) {
         _.each(this.getPlayers(), player => {
             if(player === firstPlayer) {
                 player.firstPlayer = true;
@@ -446,23 +521,13 @@ class Game extends EventEmitter {
         });
     }
 
-    changeStat(playerName, stat, value) {
+    changeStat(playerName: string, stat: string, value: number) {
         var player = this.getPlayerByName(playerName);
         if(!player) {
             return;
         }
 
         var target = player;
-
-        if(stat === 'power') {
-            target = player.faction;
-        } else if(stat === 'reserve' || stat === 'claim') {
-            if(!player.activePlot) {
-                return;
-            }
-
-            target = player.activePlot.cardData;
-        }
 
         target[stat] += value;
 
@@ -473,7 +538,7 @@ class Game extends EventEmitter {
         }
     }
 
-    chat(playerName, message) {
+    chat(playerName: string, message: string) {
         var player = this.playersAndSpectators[playerName];
         var args = message.split(' ');
 
@@ -500,7 +565,7 @@ class Game extends EventEmitter {
         this.gameChat.addChatMessage('{0} {1}', player, message);
     }
 
-    concede(playerName) {
+    concede(playerName: string) {
         var player = this.getPlayerByName(playerName);
 
         if(!player) {
@@ -516,7 +581,7 @@ class Game extends EventEmitter {
         }
     }
 
-    selectDeck(playerName, deck) {
+    selectDeck(playerName: string, deck) {
         var player = this.getPlayerByName(playerName);
 
         if(!player) {
@@ -526,7 +591,7 @@ class Game extends EventEmitter {
         player.selectDeck(deck);
     }
 
-    shuffleConflictDeck(playerName) {
+    shuffleConflictDeck(playerName: string) {
         var player = this.getPlayerByName(playerName);
         if(!player) {
             return;
@@ -537,7 +602,7 @@ class Game extends EventEmitter {
         player.shuffleConflictDeck();
     }
 
-    shuffleDynastyDeck(playerName) {
+    shuffleDynastyDeck(playerName: string) {
         var player = this.getPlayerByName(playerName);
         if(!player) {
             return;
@@ -694,7 +759,7 @@ class Game extends EventEmitter {
         }
     }
 
-    raiseEvent(eventName, params, handler) {
+    raiseEvent(eventName: string, params?, handler?) {
         if(!handler) {
             handler = () => true;
         }
@@ -732,7 +797,7 @@ class Game extends EventEmitter {
     }
 
     placeFateOnUnclaimedRings() {
-        _.each(this.rings, ring => {
+        _.each<any>(this.rings, ring => {
             if(!ring.claimed) {
                 ring.modifyFate(1);
             }
@@ -758,7 +823,7 @@ class Game extends EventEmitter {
         }
     }
     
-    takeControl(player, card) {
+    takeControl(player: Player, card: DrawCard) {
         var oldController = card.controller;
         var newController = player;
 
@@ -769,8 +834,8 @@ class Game extends EventEmitter {
         this.applyGameAction('takeControl', card, card => {
             oldController.removeCardFromPile(card);
             oldController.allCards = _(oldController.allCards.reject(c => c === card));
-            newController.cardsInPlay.push(card);
-            newController.allCards.push(card);
+            newController.cardsInPlay.value<DrawCard[]>().push(card);
+            newController.allCards.value<DrawCard[]>().push(card);
             card.controller = newController;
 
             if(card.location !== 'play area') {
@@ -790,7 +855,7 @@ class Game extends EventEmitter {
         if(!wasArray) {
             cards = [cards];
         }
-        let [allowed, disallowed] = _.partition(cards, card => card.allowGameAction(actionType));
+        let [allowed, disallowed] = _.partition<any>(cards, card => card.allowGameAction(actionType));
 
         if(!_.isEmpty(disallowed)) {
             // TODO: add a cannot / immunity message.
@@ -832,7 +897,7 @@ class Game extends EventEmitter {
         return _.all(this.playersAndSpectators, player => player.disconnected || player.left || player.id === 'TBA');
     }
 
-    leave(playerName) {
+    leave(playerName: string) {
         var player = this.playersAndSpectators[playerName];
 
         if(!player) {
@@ -852,7 +917,7 @@ class Game extends EventEmitter {
         }
     }
 
-    disconnect(playerName) {
+    disconnect(playerName: string) {
         var player = this.playersAndSpectators[playerName];
 
         if(!player) {
@@ -870,7 +935,7 @@ class Game extends EventEmitter {
         player.socket = undefined;
     }
 
-    failedConnect(playerName) {
+    failedConnect(playerName: string) {
         var player = this.playersAndSpectators[playerName];
 
         if(!player) {
@@ -890,7 +955,7 @@ class Game extends EventEmitter {
         }
     }
 
-    reconnect(socket, playerName) {
+    reconnect(socket, playerName: string) {
         var player = this.getPlayerByName(playerName);
         if(!player) {
             return;
@@ -916,11 +981,11 @@ class Game extends EventEmitter {
     }
 
     getSaveState() {
-        var players = _.map(this.getPlayers(), player => {
+        var players = _.map<Player>(_.values(this.getPlayers()), player => {
             return {
                 name: player.name,
                 faction: player.faction.name || player.faction.value,
-                agenda: player.agenda ? player.agenda.name : undefined,
+                //agenda: player.agenda ? player.agenda.name : undefined,
                 power: player.getTotalHonor()
             };
         });
@@ -936,7 +1001,7 @@ class Game extends EventEmitter {
         };
     }
 
-    getState(activePlayerName) {
+    getState(activePlayerName: string) {
         let activePlayer = this.playersAndSpectators[activePlayerName] || new AnonymousSpectator();
         let playerState = {};
         let ringState = {};
@@ -946,7 +1011,7 @@ class Game extends EventEmitter {
                 playerState[player.name] = player.getState(activePlayer);
             });
 
-            _.each(this.rings, ring => {
+            _.each<any>(this.rings, ring => {
                 ringState[ring.element] = ring.getState();
             });
 
@@ -971,10 +1036,10 @@ class Game extends EventEmitter {
         return this.getSummary(activePlayerName);
     }
 
-    getSummary(activePlayerName) {
+    getSummary(activePlayerName: string) {
         var playerSummaries = {};
 
-        _.each(this.getPlayers(), player => {
+        _.each<Player>(this.getPlayers(), player => {
             var deck = undefined;
             if(player.left) {
                 return;
@@ -1028,5 +1093,3 @@ class Game extends EventEmitter {
         };
     }
 }
-
-module.exports = Game;

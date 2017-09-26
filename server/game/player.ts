@@ -1,5 +1,6 @@
 import * as _ from 'underscore';
 
+import { Location } from './game';
 import { Spectator } from './spectator';
 import * as Deck from './deck';
 import * as AttachmentPrompt from './gamesteps/attachmentprompt';
@@ -11,22 +12,6 @@ import * as StrongholdCard from './strongholdcard';
 
 const StartingHandSize = 4;
 const DrawPhaseCards = 1;
-
-// THIS DOES NOT BELONG HERE
-export const enum GameLocation {
-    Hand = 'hand',
-    ConflictDeck = 'conflict deck',
-    DynastyDeck = 'dynasty deck',
-    ConflictDiscardPile = 'conflict discard pile',
-    DynastyDiscardPile = 'dynasty discard pile',
-    PlayArea = 'play area',
-    ProvinceOne = 'province 1',
-    ProvinceTwo = 'province 2',
-    ProvinceThree = 'province 3',
-    ProvinceFour = 'province 4',
-    StrongholdProvince = 'stronghold province',
-    ProvinceDeck = 'province deck'
-}
 
 export interface PlayerSummary {
     additionalPiles;
@@ -78,7 +63,7 @@ export class Player extends Spectator {
     additionalPiles: any = {};
     allCards: _.Underscore<any>;
 
-    faction: object = {};
+    faction: any = {};
     stronghold;
     role;
 
@@ -124,9 +109,7 @@ export class Player extends Spectator {
     showDynasty: boolean;
 
     // What are these? They are not set in this file, but are part of the summary
-    left;
     phase;
-    disconnected;
 
     constructor(id, user, owner, game) {
         super(id, user);
@@ -233,15 +216,15 @@ export class Player extends Spectator {
     }
 
     attachStronghold() {
-        this.moveCard(this.stronghold, GameLocation.StrongholdProvince);
+        this.moveCard(this.stronghold, Location.StrongholdProvince);
     }
 
     fillProvinces() {
         const provinces = [
-            GameLocation.ProvinceOne,
-            GameLocation.ProvinceTwo,
-            GameLocation.ProvinceThree,
-            GameLocation.ProvinceFour
+            Location.ProvinceOne,
+            Location.ProvinceTwo,
+            Location.ProvinceThree,
+            Location.ProvinceFour
         ];
 
         _.each(provinces, province => {
@@ -261,10 +244,10 @@ export class Player extends Spectator {
 
     discardFromBrokenProvinces() {
         const provinces = [
-            GameLocation.ProvinceOne,
-            GameLocation.ProvinceTwo,
-            GameLocation.ProvinceThree,
-            GameLocation.ProvinceFour
+            Location.ProvinceOne,
+            Location.ProvinceTwo,
+            Location.ProvinceThree,
+            Location.ProvinceFour
         ];
 
         _.each(provinces, province => {
@@ -272,7 +255,7 @@ export class Player extends Spectator {
             if(provinceCard.isBroken) {
                 _.find<any>(this.getSourceList(province)._wrapped, card => {
                     if(card.isDynasty && !card.facedown) {
-                        this.moveCard(card,GameLocation.DynastyDiscardPile);
+                        this.moveCard(card,Location.DynastyDiscardPile);
                         this.moveCard(this.dynastyDeck.first(), province);
                     }
                     return card.isDynasty;
@@ -339,7 +322,7 @@ export class Player extends Spectator {
 
         var cards = this.conflictDeck.first(numCards);
         _.each(cards, card => {
-            this.moveCard(card, GameLocation.Hand);
+            this.moveCard(card, Location.Hand);
         });
 
         if(this.game.currentPhase !== 'setup') {
@@ -349,7 +332,7 @@ export class Player extends Spectator {
         if(remainingCards > 0) {
             this.deckRanOutOfCards('conflict');
             let moreCards = this.conflictDeck.first(remainingCards);
-            _.each(moreCards, card => this.moveCard(card, GameLocation.Hand));
+            _.each(moreCards, card => this.moveCard(card, Location.Hand));
             cards = _.extend(cards, moreCards);
         }
 
@@ -358,11 +341,11 @@ export class Player extends Spectator {
     
     deckRanOutOfCards(deck) {
         this.game.addMessage('{0}\'s {1} deck has run out of cards and is being reshuffled. {0} loses 5 honor', this, deck);
-        let deckLocation = GameLocation.DynastyDeck;
-        let discardLocation = GameLocation.DynastyDiscardPile;
+        let deckLocation = Location.DynastyDeck;
+        let discardLocation = Location.DynastyDiscardPile;
         if (deck === 'conflict') {
-            deckLocation = GameLocation.ConflictDeck;
-            discardLocation = GameLocation.ConflictDiscardPile;
+            deckLocation = Location.ConflictDeck;
+            discardLocation = Location.ConflictDiscardPile;
         }
         _.each(this.getSourceList(discardLocation)._wrapped, card => this.moveCard(card, deckLocation));
         _.shuffle(this.getSourceList(deckLocation));
@@ -430,7 +413,7 @@ export class Player extends Spectator {
 
     moveFromTopToBottomOfConflictDrawDeck(number) {
         while(number > 0) {
-            this.moveCard(this.conflictDeck.first(), GameLocation.ConflictDeck, { bottom: true });
+            this.moveCard(this.conflictDeck.first(), Location.ConflictDeck, { bottom: true });
 
             number--;
         }
@@ -660,7 +643,7 @@ export class Player extends Spectator {
         let originalLocation = card.location;
 
         card.new = true;
-        this.moveCard(card, GameLocation.PlayArea);
+        this.moveCard(card, Location.PlayArea);
         if(card.controller !== this) {
             card.controller.allCards = _(card.controller.allCards.reject(c => c === card));
             this.allCards.value<any>().push(card);
@@ -778,51 +761,51 @@ export class Player extends Spectator {
         this.showDynasty = true;
     }
 
-    isValidDropCombination(source: GameLocation, target: GameLocation) {
+    isValidDropCombination(source: Location, target: Location) {
         const provinceList = [
-            GameLocation.ProvinceOne,
-            GameLocation.ProvinceTwo,
-            GameLocation.ProvinceThree,
-            GameLocation.ProvinceFour,
-            GameLocation.StrongholdProvince
+            Location.ProvinceOne,
+            Location.ProvinceTwo,
+            Location.ProvinceThree,
+            Location.ProvinceFour,
+            Location.StrongholdProvince
         ];
 
-        if(source === GameLocation.ProvinceDeck && !_.isEmpty(_.intersection(provinceList, target))) {
+        if(source === Location.ProvinceDeck && !_.isEmpty(_.intersection(provinceList, target))) {
             return false;
         }
 
-        if(target === GameLocation.ProvinceDeck && !_.isEmpty(_.intersection(provinceList, source))) {
+        if(target === Location.ProvinceDeck && !_.isEmpty(_.intersection(provinceList, source))) {
             return false;
         }
 
         return source !== target;
     }
 
-    getSourceList(source: GameLocation) {
+    getSourceList(source: Location) {
         switch(source) {
-            case GameLocation.Hand:
+            case Location.Hand:
                 return this.hand;
-            case GameLocation.ConflictDeck:
+            case Location.ConflictDeck:
                 return this.conflictDeck;
-            case GameLocation.DynastyDeck:
+            case Location.DynastyDeck:
                 return this.dynastyDeck;
-            case GameLocation.ConflictDiscardPile:
+            case Location.ConflictDiscardPile:
                 return this.conflictDiscardPile;
-            case GameLocation.DynastyDiscardPile:
+            case Location.DynastyDiscardPile:
                 return this.dynastyDiscardPile;
-            case GameLocation.PlayArea:
+            case Location.PlayArea:
                 return this.cardsInPlay;
-            case GameLocation.ProvinceOne:
+            case Location.ProvinceOne:
                 return this.provinceOne;
-            case GameLocation.ProvinceTwo:
+            case Location.ProvinceTwo:
                 return this.provinceTwo;
-            case GameLocation.ProvinceThree:
+            case Location.ProvinceThree:
                 return this.provinceThree;
-            case GameLocation.ProvinceFour:
+            case Location.ProvinceFour:
                 return this.provinceFour;
-            case GameLocation.StrongholdProvince:
+            case Location.StrongholdProvince:
                 return this.strongholdProvince;
-            case GameLocation.ProvinceDeck:
+            case Location.ProvinceDeck:
                 return this.provinceDeck;
             default:
                 if(this.additionalPiles[source]) {
@@ -835,42 +818,42 @@ export class Player extends Spectator {
         this.additionalPiles[name] = _.extend({ cards: _([]) }, properties);
     }
 
-    updateSourceList(source: GameLocation, targetList) {
+    updateSourceList(source: Location, targetList) {
         switch(source) {
-            case GameLocation.Hand:
+            case Location.Hand:
                 this.hand = targetList;
                 break;
-            case GameLocation.ConflictDeck:
+            case Location.ConflictDeck:
                 this.conflictDeck = targetList;
                 break;
-            case GameLocation.DynastyDeck:
+            case Location.DynastyDeck:
                 this.dynastyDeck = targetList;
                 break;
-            case GameLocation.ConflictDiscardPile:
+            case Location.ConflictDiscardPile:
                 this.conflictDiscardPile = targetList;
                 break;
-            case GameLocation.DynastyDiscardPile:
+            case Location.DynastyDiscardPile:
                 this.dynastyDiscardPile = targetList;
                 break;
-            case GameLocation.PlayArea:
+            case Location.PlayArea:
                 this.cardsInPlay = targetList;
                 break;
-            case GameLocation.ProvinceOne:
+            case Location.ProvinceOne:
                 this.provinceOne = targetList;
                 break;
-            case GameLocation.ProvinceTwo:
+            case Location.ProvinceTwo:
                 this.provinceTwo = targetList;
                 break;
-            case GameLocation.ProvinceThree:
+            case Location.ProvinceThree:
                 this.provinceThree = targetList;
                 break;
-            case GameLocation.ProvinceFour:
+            case Location.ProvinceFour:
                 this.provinceFour = targetList;
                 break;
-            case GameLocation.StrongholdProvince:
+            case Location.StrongholdProvince:
                 this.strongholdProvince = targetList;
                 break;
-            case GameLocation.ProvinceDeck:
+            case Location.ProvinceDeck:
                 this.provinceDeck = targetList;
                 break;
             default:
@@ -880,7 +863,7 @@ export class Player extends Spectator {
         }
     }
 
-    drop(cardId, source: GameLocation, target: GameLocation) {
+    drop(cardId, source: Location, target: Location) {
         if(!this.isValidDropCombination(source, target)) {
             return false;
         }
@@ -889,7 +872,7 @@ export class Player extends Spectator {
         var card = this.findCardByUuid(sourceList, cardId);
 
         if(!card) {
-            if(source === GameLocation.PlayArea) {
+            if(source === Location.PlayArea) {
                 var otherPlayer = this.game.getOtherPlayer(this);
 
                 if(!otherPlayer) {
@@ -910,19 +893,19 @@ export class Player extends Spectator {
             return false;
         }
 
-        if(target === GameLocation.PlayArea && card.getType() === 'event') {
+        if(target === Location.PlayArea && card.getType() === 'event') {
             return false;
         }
 
-        if(target === GameLocation.PlayArea) {
+        if(target === Location.PlayArea) {
             this.putIntoPlay(card);
         } else {
-            if(target === GameLocation.ConflictDiscardPile) {
+            if(target === Location.ConflictDiscardPile) {
                 this.discardCard(card, false);
                 return true;
             }
 
-            if(target === GameLocation.DynastyDiscardPile) {
+            if(target === Location.DynastyDiscardPile) {
                 this.discardCard(card, false);
                 return true;
             }
@@ -966,9 +949,9 @@ export class Player extends Spectator {
         this.game.applyGameAction('sacrifice', card, card => {
             this.game.raiseEvent('onSacrificed', { player: this, card: card }, () => {
                 if (card.isConflict) {
-                    this.moveCard(card, GameLocation.ConflictDiscardPile);
+                    this.moveCard(card, Location.ConflictDiscardPile);
                 } else if (card.isDynasty) {
-                    this.moveCard(card, GameLocation.DynastyDiscardPile);
+                    this.moveCard(card, Location.DynastyDiscardPile);
                 }
             });
         });
@@ -1006,16 +989,16 @@ export class Player extends Spectator {
         };
         this.game.raiseEvent('onCardDiscarded', params, event => {
             if(event.card.isConflict) {
-                this.moveCard(event.card, GameLocation.ConflictDiscardPile);
+                this.moveCard(event.card, Location.ConflictDiscardPile);
             } else if(event.card.isDynasty) {
-                this.moveCard(event.card, GameLocation.DynastyDiscardPile);
+                this.moveCard(event.card, Location.DynastyDiscardPile);
             }
         });
     }
 
     returnCardToHand(card) {
         this.game.applyGameAction('returnToHand', card, card => {
-            this.moveCard(card, GameLocation.Hand);
+            this.moveCard(card, Location.Hand);
         });
     }
 
@@ -1070,9 +1053,9 @@ export class Player extends Spectator {
     removeAttachment(attachment, parentLeftPlay = false) {
 
         if(attachment.isAncestral() && parentLeftPlay) {
-            attachment.owner.moveCard(attachment, GameLocation.Hand);
+            attachment.owner.moveCard(attachment, Location.Hand);
         } else {
-            attachment.owner.moveCard(attachment, GameLocation.ConflictDiscardPile);
+            attachment.owner.moveCard(attachment, Location.ConflictDiscardPile);
         }
     }
 
@@ -1085,7 +1068,7 @@ export class Player extends Spectator {
         this.faction = deck.faction;
     }
 
-    moveCard(card, targetLocation: GameLocation, options:any = {}) {
+    moveCard(card, targetLocation: Location, options:any = {}) {
 
         this.removeCardFromPile(card);
 
@@ -1095,7 +1078,7 @@ export class Player extends Spectator {
             return;
         }
 
-        if(card.location === GameLocation.PlayArea && (card.isConflict || card.isDynasty)) {
+        if(card.location === Location.PlayArea && (card.isConflict || card.isDynasty)) {
             if(card.owner !== this) {
                 card.owner.moveCard(card, targetLocation);
                 return;
@@ -1134,11 +1117,11 @@ export class Player extends Spectator {
             this.game.raiseEvent('onCardLeftPlay', { player: this, card: card });
         }
 
-        if(card.location !== GameLocation.PlayArea) {
+        if(card.location !== Location.PlayArea) {
             card.moveTo(targetLocation);
         }
 
-        if([GameLocation.ProvinceOne, GameLocation.ProvinceTwo, GameLocation.ProvinceThree, GameLocation.ProvinceFour, GameLocation.StrongholdProvince].includes(targetLocation)) {
+        if([Location.ProvinceOne, Location.ProvinceTwo, Location.ProvinceThree, Location.ProvinceFour, Location.StrongholdProvince].includes(targetLocation)) {
             if(!card.isStronghold) {
                 card.facedown = true;
             }
@@ -1146,15 +1129,15 @@ export class Player extends Spectator {
                 card.facedown = false;
             }
             targetPile.push(card);
-        } else if(targetLocation === GameLocation.ConflictDeck && !options.bottom) {
+        } else if(targetLocation === Location.ConflictDeck && !options.bottom) {
             targetPile.unshift(card);
-        } else if(targetLocation === GameLocation.DynastyDeck && !options.bottom) {
+        } else if(targetLocation === Location.DynastyDeck && !options.bottom) {
             targetPile.unshift(card);
         } else {
             targetPile.push(card);
         }
 
-        if([GameLocation.DynastyDiscardPile, GameLocation.ConflictDiscardPile].includes(targetLocation)) {
+        if([Location.DynastyDiscardPile, Location.ConflictDiscardPile].includes(targetLocation)) {
             this.game.raiseEvent('onCardPlaced', { card: card, location: targetLocation });
         }
     }
