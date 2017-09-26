@@ -1,4 +1,4 @@
-const DrawCard = require('../drawcard.js');
+const DrawCard = require('../drawcard.js').DrawCard;
 
 class ConflictEvent extends DrawCard {
     // event card that can only be played during a conflict

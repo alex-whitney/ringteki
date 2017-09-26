@@ -1,8 +1,8 @@
 const _ = require('underscore');
 
 const cards = require('./cards');
-const DrawCard = require('./drawcard.js');
-const ProvinceCard = require('./provincecard.js');
+const DrawCard = require('./drawcard').DrawCard;
+const ProvinceCard = require('./provincecard').ProvinceCard;
 const StrongholdCard = require('./strongholdcard.js');
 const RoleCard = require('./rolecard.js');
 

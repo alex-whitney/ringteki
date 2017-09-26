@@ -1,17 +1,24 @@
 const _ = require('underscore');
 
-const BaseCard = require('./basecard.js');
+import { BaseCard, BaseCardSummary } from './basecard';
+import { Player } from "./player";
 
-class ProvinceCard extends BaseCard {
+export interface ProvinceCardSummary extends BaseCardSummary {
+    strength: number;
+    isBroken: boolean;
+}
+
+export class ProvinceCard extends BaseCard {
+    strengthModifier = 0;
+    isBroken = false;
+
     constructor(owner, cardData) {
         super(owner, cardData);
 
-        this.strengthModifier = 0;
         this.isProvince = true;
-        this.isBroken = false;
     }
 
-    getStrength() {
+    getStrength(): number {
         return this.cardData.strength + this.strengthModifier;
     }
 
@@ -23,7 +30,7 @@ class ProvinceCard extends BaseCard {
         this.isBroken = true;
     }
 
-    getSummary(activePlayer, hideWhenFaceup) {
+    getSummary(activePlayer: Player, hideWhenFaceup): ProvinceCardSummary {
         let baseSummary = super.getSummary(activePlayer, hideWhenFaceup);
 
         return _.extend(baseSummary, {
@@ -34,5 +41,3 @@ class ProvinceCard extends BaseCard {
     }
 
 }
-
-module.exports = ProvinceCard;

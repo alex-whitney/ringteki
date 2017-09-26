@@ -1,5 +1,5 @@
 const _ = require('underscore');
-const Player = require('./player.js');
+const Player = require('./player').Player;
 const EventRegistrar = require('./eventregistrar.js');
 const Settings = require('../settings.js');
 

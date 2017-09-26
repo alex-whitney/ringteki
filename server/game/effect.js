@@ -1,7 +1,7 @@
 const _ = require('underscore');
 
 const Effects = require('./effects.js');
-const Player = require('./player.js');
+const Player = require('./player').Player;
 
 const PlayAreaLocations = ['play area', 'province'];
 

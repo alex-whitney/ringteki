@@ -1,4 +1,4 @@
-const DrawCard = require('../drawcard.js');
+const DrawCard = require('../drawcard.js').DrawCard;
 
 class FactionCostReducer extends DrawCard {
     constructor(owner, cardData, reduceBy, faction) {

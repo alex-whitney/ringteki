@@ -1,5 +1,7 @@
 const uuid = require('uuid');
-const _ = require('underscore');
+import * as _ from 'underscore';
+
+import { Player } from './player';
 
 const AbilityDsl = require('./abilitydsl.js');
 const CardAction = require('./cardaction.js');
@@ -21,8 +23,63 @@ const ValidKeywords = [
 ];
 const LocationsWithEventHandling = ['play area', 'province'];
 
-class BaseCard {
-    constructor(owner, cardData) {
+export interface BaseCardSummary {
+    id?: string;
+    controlled?;
+    facedown?: boolean;
+    menu?;
+    name?;
+    new?;
+    tokens?;
+    type?;
+    uuid?: string;
+    inConflict?: boolean;
+}
+
+export class BaseCard {
+    owner: Player;
+    controller: Player;
+    game;
+    cardData;
+
+    uuid: string;
+    id;
+    name;
+    facedown = false;
+    blankCount = 0;
+    inConflict = false;
+
+    type;
+    tokens: object;
+    strongholdModifierValues;
+    canProvideStrongholdModifier;
+    provinceModifierValues;
+    canProvideProvinceModifier;
+    abilityRestrictions: Array<any>;
+    menu: _.Underscore<any>;
+    events;
+
+    abilities;
+
+    factions: object;
+    isProvince = false;
+    isConflict = false;
+    isDynasty = false;
+    isStronghold = false;
+
+    keywords: object;
+    printedKeywords: Array<any>;
+    allowedAttachmentTraits: Array<any>;
+    traits;
+    eventsForRegistration;
+
+    parent;
+    location;
+
+    // Referenced in summary, but not populated in this file
+    new;
+
+    constructor(owner: Player, cardData) {
         this.owner = owner;
         this.controller = owner;
         this.game = this.owner.game;
@@ -31,9 +88,6 @@ class BaseCard {
         this.uuid = uuid.v1();
         this.id = cardData.id;
         this.name = cardData.name;
-        this.facedown = false;
-        this.blankCount = 0;
-        this.inConflict = false;
 
         this.type = cardData.type;
 
@@ -67,15 +121,10 @@ class BaseCard {
 
         this.factions = {};
         this.addFaction(cardData.clan);
-
-        this.isProvince = false;
-        this.isConflict = false;
-        this.isDynasty = false;
-        this.isStronghold = false;
     }
 
-    parseKeywords(text) {
-        var lines = text.split('\n');
+    parseKeywords(text: string): void {
+        let lines = text.split('\n');
         var potentialKeywords = [];
         _.each(lines, line => {
             line = line.slice(0, -1);
@@ -115,11 +164,12 @@ class BaseCard {
         this.eventsForRegistration = events;
     }
 
-    setupCardAbilities(ability) { // eslint-disable-line no-unused-vars
+    setupCardAbilities(abilityDsl) { // eslint-disable-line no-unused-vars
+
     }
 
     provinceModifiers(modifiers) {
-        this.provincetModifierValues = _.extend(this.provinceModifierValues, modifiers);
+        this.provinceModifierValues = _.extend(this.provinceModifierValues, modifiers);
         if(modifiers.strength) {
             this.persistentEffect({
                 condition: () => this.canProvideProvinceModifier['strength'],
@@ -135,7 +185,7 @@ class BaseCard {
 
         if(!action.isClickToActivate() && action.allowMenu()) {
             var index = this.abilities.actions.length;
-            this.menu.push(action.getMenuItem(index));
+            this.menu.value<any>().push(action.getMenuItem(index));
         }
         this.abilities.actions.push(action);
     }
@@ -230,7 +280,7 @@ class BaseCard {
         this.game.addEffect(this, _.extend({ duration: 'custom', location: 'any' }, properties));
     }
 
-    doAction(player, arg) {
+    doAction(player: Player, arg) {
         var action = this.abilities.actions[arg];
 
         if(!action) {
@@ -258,7 +308,7 @@ class BaseCard {
     }
 
     applyAnyLocationPersistentEffects() {
-        _.each(this.abilities.persistentEffects, effect => {
+        _.each<any>(this.abilities.persistentEffects, effect => {
             if(effect.location === 'any') {
                 this.game.addEffect(this, effect);
             }
@@ -266,7 +316,7 @@ class BaseCard {
     }
 
     applyPersistentEffects() {
-        _.each(this.abilities.persistentEffects, effect => {
+        _.each<any>(this.abilities.persistentEffects, effect => {
             if(effect.location !== 'any') {
                 this.game.addEffect(this, effect);
             }
@@ -288,14 +338,14 @@ class BaseCard {
             this.events.unregisterAll();
         }
 
-        _.each(this.abilities.actions, action => {
+        _.each<any>(this.abilities.actions, action => {
             if(action.isEventListeningLocation(targetLocation) && !action.isEventListeningLocation(originalLocation)) {
                 action.registerEvents();
             } else if(action.isEventListeningLocation(originalLocation) && !action.isEventListeningLocation(targetLocation)) {
                 action.unregisterEvents();
             }
         });
-        _.each(this.abilities.reactions, reaction => {
+        _.each<any>(this.abilities.reactions, reaction => {
             if(reaction.isEventListeningLocation(targetLocation) && !reaction.isEventListeningLocation(originalLocation)) {
                 reaction.registerEvents();
                 this.game.registerAbility(reaction);
@@ -460,8 +510,8 @@ class BaseCard {
         }
     }
 
-    onClick(player) {
-        var action = _.find(this.abilities.actions, action => action.isClickToActivate());
+    onClick(player: Player) {
+        var action = _.find<any>(this.abilities.actions, action => action.isClickToActivate());
         if(action) {
             return action.execute(player) || action.deactivate(player);
         }
@@ -478,19 +528,21 @@ class BaseCard {
         };
     }
 
-    getSummary(activePlayer, hideWhenFaceup) {
+    getSummary(activePlayer, hideWhenFaceup): BaseCardSummary {
         let isActivePlayer = activePlayer === this.owner;
 
         if(!isActivePlayer && (this.facedown || hideWhenFaceup) && this.isProvince) {
             return { 
                 uuid: this.uuid,
                 inConflict: this.inConflict,
-                facedown: true};
+                facedown: true
+            };
         }
 
         if(!isActivePlayer && (this.facedown || hideWhenFaceup)) {
             return { 
-                facedown: true};
+                facedown: true
+            };
         }
 
         let selectionState = activePlayer.getCardSelectionState(this);
@@ -509,5 +561,3 @@ class BaseCard {
         return _.extend(state, selectionState);
     }
 }
-
-module.exports = BaseCard;

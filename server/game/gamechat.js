@@ -1,7 +1,7 @@
 const _ = require('underscore');
 
-const BaseCard = require('./basecard.js');
-const Spectator = require('./spectator.js');
+const BaseCard = require('./basecard').BaseCard;
+const Spectator = require('./spectator').Spectator;
 
 class GameChat {
     constructor() {
